@@ -15,13 +15,13 @@ const logger = createLogger("TodoService");
 
 const todoAccess = new TodosAccess();
 
-export async function getAllTodoItems(): Promise<TodoItem[]> {
+export async function getAllTodos(): Promise<TodoItem[]> {
   logger.info("Called todoAccess.getAllTodoItems");
 
   return todoAccess.getAllTodoItems();
 }
 
-export async function createTodoItem(
+export async function createTodo(
   createTodoRequest: CreateTodoRequest
   //   jwtToken: string
 ): Promise<TodoItem> {
@@ -41,12 +41,12 @@ export async function createTodoItem(
   });
 }
 
-export async function getTodoItem(todoItem: string) {
+export async function getTodo(todoItem: string) {
   logger.info(`Called todoAccess.getTodoItem with ${todoItem}`);
   return todoAccess.getTodoItem(todoItem);
 }
 
-export async function updateTodoItem(
+export async function updateTodo(
   todoItem: string,
   updatedFields: UpdateTodoRequest
 ) {
@@ -54,7 +54,7 @@ export async function updateTodoItem(
   //   Check if TodoItem exist
   const todoExists = todoAccess.TodoItemExists(todoItem);
 
-  if (!todoExists) return createError(404, "Todo Item does not exist");
+  if (!todoExists) throw createError(404, "Todo Item does not exist");
 
   logger.info(
     `Called todoAccess.updateTodoItem with ${todoItem} and ${updatedFields}`
@@ -63,12 +63,12 @@ export async function updateTodoItem(
   return todoAccess.updateTodoItem(todoItem, updatedFields);
 }
 
-export async function deleteTodoItem(todoItem: string) {
+export async function deleteTodo(todoItem: string) {
   logger.info(`Called todoAccess.TodoItemExists with ${todoItem}`);
   //   Check if TodoItem exist
   const todoExists = todoAccess.TodoItemExists(todoItem);
 
-  if (!todoExists) return createError(404, "Todo Item does not exist");
+  if (!todoExists) throw createError(404, "Todo Item does not exist");
 
   logger.info(`Called todoAccess.deleteTodoItem with ${todoItem} `);
 
