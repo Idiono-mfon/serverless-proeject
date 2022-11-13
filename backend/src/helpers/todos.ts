@@ -1,5 +1,5 @@
 import { TodosAccess } from "./todosAcess";
-// import { AttachmentUtils } from "./attachmentUtils";
+import { generateSignedUrl } from "./attachmentUtils";
 import { TodoItem } from "../models/TodoItem";
 import { CreateTodoRequest } from "../requests/CreateTodoRequest";
 import { UpdateTodoRequest } from "../requests/UpdateTodoRequest";
@@ -15,24 +15,23 @@ const logger = createLogger("TodoService");
 
 const todoAccess = new TodosAccess();
 
-export async function getAllTodos(): Promise<TodoItem[]> {
+export async function getAllTodos(userId: string): Promise<TodoItem[]> {
   logger.info("Called todoAccess.getAllTodoItems");
 
-  return todoAccess.getAllTodoItems();
+  return todoAccess.getAllTodoItems(userId);
 }
 
 export async function createTodo(
-  createTodoRequest: CreateTodoRequest
-  //   jwtToken: string
+  createTodoRequest: CreateTodoRequest,
+  userId: string
 ): Promise<TodoItem> {
   const itemId = uuid.v4();
-  const userId = "1";
-  //   const userId = getUserId(jwtToken);
+  // const userId = "1";
   logger.info("Called todoAccess.createGroup");
 
   return await todoAccess.createTodoItem({
     todoId: itemId,
-    userId: userId,
+    userId,
     name: createTodoRequest.name,
     dueDate: createTodoRequest.dueDate,
     createdAt: new Date().toISOString(),
@@ -41,18 +40,19 @@ export async function createTodo(
   });
 }
 
-export async function getTodo(todoItem: string) {
+export async function getTodo(todoItem: string, userId: string) {
   logger.info(`Called todoAccess.getTodoItem with ${todoItem}`);
-  return todoAccess.getTodoItem(todoItem);
+  return await todoAccess.getTodoItem(todoItem, userId);
 }
 
 export async function updateTodo(
   todoItem: string,
+  userId: string,
   updatedFields: UpdateTodoRequest
 ) {
   logger.info(`Called todoAccess.TodoItemExists with ${todoItem}`);
   //   Check if TodoItem exist
-  const todoExists = todoAccess.TodoItemExists(todoItem);
+  const todoExists = await todoAccess.TodoItemExists(todoItem, userId);
 
   if (!todoExists) throw createError(404, "Todo Item does not exist");
 
@@ -60,17 +60,38 @@ export async function updateTodo(
     `Called todoAccess.updateTodoItem with ${todoItem} and ${updatedFields}`
   );
 
-  return todoAccess.updateTodoItem(todoItem, updatedFields);
+  return await todoAccess.updateTodoItem(todoItem, userId, updatedFields);
 }
 
-export async function deleteTodo(todoItem: string) {
+export async function deleteTodo(todoItem: string, userId: string) {
   logger.info(`Called todoAccess.TodoItemExists with ${todoItem}`);
   //   Check if TodoItem exist
-  const todoExists = todoAccess.TodoItemExists(todoItem);
+  const todoExists = await todoAccess.TodoItemExists(todoItem, userId);
 
   if (!todoExists) throw createError(404, "Todo Item does not exist");
 
   logger.info(`Called todoAccess.deleteTodoItem with ${todoItem} `);
 
-  return todoAccess.deleteTodoItem(todoItem);
+  return await todoAccess.deleteTodoItem(todoItem, userId);
+}
+
+export async function createAttachmentPresignedUrl(
+  todoItemId: string,
+  userId: string
+) {
+  const todoExists = await todoAccess.TodoItemExists(todoItemId, userId);
+
+  if (!todoExists) throw createError(404, "Todo Item does not exist");
+  const { uploadUrl, attachmentUrl } = generateSignedUrl(todoItemId);
+
+  const result = await todoAccess.updateTodoUrl(
+    todoItemId,
+    userId,
+    attachmentUrl
+  );
+
+  if (!result)
+    throw createError(500, "Error occured while creating attachment URL");
+
+  return uploadUrl;
 }

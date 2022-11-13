@@ -3,7 +3,7 @@ import "source-map-support/register";
 import * as middy from "middy";
 import { cors } from "middy/middlewares";
 import { CreateTodoRequest } from "../../requests/CreateTodoRequest";
-// import { getUserId } from "../utils";
+import { getUserId } from "../utils";
 import { createTodo } from "../../helpers/todos";
 
 export const handler = middy(
@@ -11,21 +11,24 @@ export const handler = middy(
     try {
       const newTodo: CreateTodoRequest = JSON.parse(event.body);
       // Handle Authentication latter
-      const newItem = await createTodo(newTodo);
+
+      const userId = getUserId(event);
+
+      const item = await createTodo(newTodo, userId);
 
       return {
         statusCode: 201,
 
         body: JSON.stringify({
-          newItem,
+          item,
         }),
       };
     } catch (error) {
       return {
-        statusCode: error.statusCode || 500,
+        statusCode: error.statusCode,
 
         body: JSON.stringify({
-          message: error.message || "Internal Server Error",
+          message: error.message,
         }),
       };
     }

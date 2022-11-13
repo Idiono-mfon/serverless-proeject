@@ -18,7 +18,7 @@ export class TodosAccess {
     private readonly createdAtIndex = process.env.TODOS_CREATED_AT_INDEX
   ) {}
 
-  async getAllTodoItems(): Promise<TodoItem[]> {
+  async getAllTodoItems(userId: string): Promise<TodoItem[]> {
     logger.info("Initiated querying all todos");
 
     const tomorrow = new Date();
@@ -29,9 +29,10 @@ export class TodosAccess {
       .query({
         TableName: this.todosTable,
         IndexName: this.createdAtIndex,
-        KeyConditionExpression: "timestamp < :t",
+        KeyConditionExpression: "userId = :uId AND createdAt < :createdAt",
         ExpressionAttributeValues: {
-          ":t": tomorrow.toISOString(),
+          ":uId": userId,
+          ":createdAt": tomorrow.toISOString(),
         },
       })
       .promise();
@@ -43,7 +44,7 @@ export class TodosAccess {
     return items as TodoItem[];
   }
 
-  async getTodoItem(todoItemId: string): Promise<TodoItem> {
+  async getTodoItem(todoItemId: string, userId: string): Promise<TodoItem> {
     logger.info("Initiated querying a todo item");
 
     const result = await this.docClient
@@ -51,6 +52,7 @@ export class TodosAccess {
         TableName: this.todosTable,
         Key: {
           todoId: todoItemId,
+          userId,
         },
       })
       .promise();
@@ -78,35 +80,93 @@ export class TodosAccess {
 
   async updateTodoItem(
     todoItemId: string,
+    userId: string,
     updatedFields: TodoUpdate
   ): Promise<TodoItem | null> {
-    logger.info("Initiated updating a todo item");
+    try {
+      logger.info("Initiated updating a todo item");
 
-    const result = await this.docClient
-      .update({
-        TableName: this.todosTable,
-        Key: {
-          todoId: todoItemId,
-        },
-        UpdateExpression: "set name = :n, dueDate = :dd, done = :dn",
-        ExpressionAttributeValues: {
-          ":n": updatedFields.name,
-          ":dd": updatedFields.dueDate,
-          ":dn": updatedFields.done,
-        },
-      })
-      .promise();
+      const result = await this.docClient
+        .update({
+          TableName: this.todosTable,
+          Key: {
+            todoId: todoItemId,
+            userId,
+          },
+          UpdateExpression:
+            "set #dueDate = :dueDate, #done = :done, #title = :name",
 
-    const item = result.$response.data;
+          ExpressionAttributeNames: {
+            "#title": "name",
+            "#dueDate": "dueDate",
+            "#done": "done",
+          },
+          ExpressionAttributeValues: {
+            ":name": updatedFields.name,
+            ":dueDate": updatedFields.dueDate,
+            ":done": updatedFields.done,
+          },
 
-    logger.info(`updated a todo item with id: ${todoItemId}`);
+          ReturnValues: "ALL_NEW",
+        })
+        .promise();
 
-    if (item) return item as TodoItem;
+      logger.info(`updated a todo item with id: ${todoItemId}`);
 
-    return null;
+      const item = result.Attributes;
+
+      if (item) return item as TodoItem;
+
+      return null;
+    } catch (error) {
+      console.log(error.message);
+    }
   }
 
-  async deleteTodoItem(todoItemId: string): Promise<TodoItem | null> {
+  async updateTodoUrl(
+    todoItemId: string,
+    userId: string,
+    uploadUrl: string
+  ): Promise<string> {
+    try {
+      logger.info("Initiated updating a todo item");
+
+      const result = await this.docClient
+        .update({
+          TableName: this.todosTable,
+          Key: {
+            todoId: todoItemId,
+            userId,
+          },
+          UpdateExpression: "set #attachmentUrl = :attachmentUrl",
+
+          ExpressionAttributeNames: {
+            "#attachmentUrl": "attachmentUrl",
+          },
+          ExpressionAttributeValues: {
+            ":attachmentUrl": uploadUrl,
+          },
+
+          ReturnValues: "ALL_NEW",
+        })
+        .promise();
+
+      logger.info(`updated a todo item with id: ${todoItemId}`);
+
+      const item = result.Attributes;
+
+      if (item) return uploadUrl;
+
+      return null;
+    } catch (error) {
+      console.log(error.message);
+    }
+  }
+
+  async deleteTodoItem(
+    todoItemId: string,
+    userId: string
+  ): Promise<TodoItem | null> {
     logger.info("Initiated deleting a todo item");
 
     const result = await this.docClient
@@ -114,11 +174,12 @@ export class TodosAccess {
         TableName: this.todosTable,
         Key: {
           todoId: todoItemId,
+          userId,
         },
       })
       .promise();
 
-    const item = result.$response.data;
+    const item = result.Attributes;
 
     logger.info(`deleted a todo item with id: ${todoItemId}`);
 
@@ -127,7 +188,7 @@ export class TodosAccess {
     return null;
   }
 
-  async TodoItemExists(todoItemId: string): Promise<boolean> {
+  async TodoItemExists(todoItemId: string, userId: string): Promise<boolean> {
     logger.info("Initiated querying a todo item");
 
     const result = await this.docClient
@@ -135,6 +196,7 @@ export class TodosAccess {
         TableName: this.todosTable,
         Key: {
           todoId: todoItemId,
+          userId,
         },
       })
       .promise();
