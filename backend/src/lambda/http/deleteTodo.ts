@@ -6,7 +6,7 @@ import { cors } from "middy/middlewares";
 
 // import { cors, httpErrorHandler } from "middy/middlewares";
 
-import { deleteTodo } from "../../helpers/todos";
+import { deleteTodo } from "../../businessLogic/todos";
 import { getUserId } from "../utils";
 
 export const handler = middy(

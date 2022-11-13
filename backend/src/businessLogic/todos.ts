@@ -1,5 +1,5 @@
-import { TodosAccess } from "./todosAcess";
-import { generateSignedUrl } from "./attachmentUtils";
+import { TodosAccess } from "../dataLayer/todosAcess";
+import { generateSignedUrl } from "../helpers/attachmentUtils";
 import { TodoItem } from "../models/TodoItem";
 import { CreateTodoRequest } from "../requests/CreateTodoRequest";
 import { UpdateTodoRequest } from "../requests/UpdateTodoRequest";
